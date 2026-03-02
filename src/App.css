@@ -1,0 +1,14 @@
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+/* body{
+  overflow: hidden;
+} */
+.animate-scroll {
+  animation: scroll 30s linear infinite;
+}
