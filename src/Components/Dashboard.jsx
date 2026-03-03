@@ -16,6 +16,7 @@ import {
   Download,
   Filter,
   ChevronRight,
+  ArrowRight,
   Medal,
   Zap
 } from 'lucide-react';
@@ -474,12 +475,37 @@ const handleResumeReportClick = (p) => {
           transition={{ duration: 0.4 }}
           className="mb-8"
         >
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 backdrop-blur-sm">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              Welcome back, <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{state.auth.user?.displayName || state.auth.user?.email || 'User'}</span>!
-            </h1>
-            <p className="text-gray-600 text-base md:text-lg">Here's your interview preparation progress</p>
-        </div>
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 backdrop-blur-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                Welcome back,{" "}
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {state.auth.user?.displayName || state.auth.user?.email || "User"}
+                </span>
+                !
+              </h1>
+              <p className="text-gray-600 text-base md:text-lg">
+                Here's your interview preparation progress
+              </p>
+            </div>
+
+            {/* Start interview CTA */}
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/video-interview")}
+              className="relative inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-sm md:text-base text-white overflow-hidden group"
+            >
+              {/* Glow */}
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-60 blur-xl group-hover:opacity-80 transition-opacity duration-300" />
+              {/* Solid gradient */}
+              <span className="absolute inset-[1px] rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500" />
+              <span className="relative z-10 flex items-center gap-2.5">
+                <span>Start interview</span>
+                <ArrowRight className="h-4.5 w-4.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </span>
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* My Classroom Card - Hidden for trial */}
