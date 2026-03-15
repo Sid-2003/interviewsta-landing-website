@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useVideoInterview } from "../Contexts/VideoInterviewContext";
 import PopupForm from "./PopupForm";
 import SystemCheck from "./SystemCheck";
+import TopicSelectionGrid from "./TopicSelectionGrid";
 import {
   BookOpen,
   Play,
@@ -38,6 +39,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   Sparkles,
   Info,
   Lock,
@@ -47,6 +49,18 @@ import SearchBar from "./VideoInterview/SearchBar";
 import InterviewTypeCard from "./VideoInterview/InterviewTypeCard";
 import TipsDrawer from "./VideoInterview/TipsDrawer";
 import StickyActionBar from "./VideoInterview/StickyActionBar";
+
+// Hardcoded fallback consulting topics — used when the API is unavailable
+const CONSULTING_TOPICS = [
+  { slug: "profitability",          name: "Profitability",          icon: "📉", color: "from-red-400 to-orange-500",    description: "Diagnose why profit has declined or identify levers to improve it.",                          frameworks: ["Revenue tree", "Cost tree"] },
+  { slug: "market_entry",           name: "Market Entry",           icon: "🌍", color: "from-blue-400 to-cyan-500",     description: "Assess whether and how a client should enter a new market or geography.",                   frameworks: ["TAM/SAM/SOM", "Porter's 5 Forces"] },
+  { slug: "growth_strategy",        name: "Growth Strategy",        icon: "📈", color: "from-green-400 to-emerald-500", description: "Identify levers to grow revenue or market share beyond the core business.",                 frameworks: ["Ansoff Matrix", "Segmentation"] },
+  { slug: "mergers_acquisitions",   name: "M&A",                    icon: "🤝", color: "from-violet-400 to-purple-500", description: "Evaluate an acquisition's strategic rationale, valuation, and synergies.",                 frameworks: ["Synergy tree", "Due diligence"] },
+  { slug: "pricing_strategy",       name: "Pricing Strategy",       icon: "💲", color: "from-yellow-400 to-amber-500",  description: "Design or fix a pricing model for a product or service.",                                  frameworks: ["Value-based", "Price-volume"] },
+  { slug: "operations",             name: "Operations",             icon: "⚙️", color: "from-slate-400 to-gray-500",   description: "Reduce costs or improve throughput in a business process.",                                frameworks: ["Process mapping", "Bottleneck"] },
+  { slug: "competitive_response",   name: "Competitive Response",   icon: "⚔️", color: "from-pink-400 to-rose-500",    description: "Respond to a competitor entering the market or disrupting pricing.",                       frameworks: ["Competitive map", "War-gaming"] },
+  { slug: "digital_transformation", name: "Digital Transformation", icon: "💡", color: "from-indigo-400 to-blue-600",  description: "Build the case for or against a major technology investment.",                             frameworks: ["Build/buy/partner", "ROI/NPV"] },
+];
 
 
 const VideoInterview = () => {
@@ -59,6 +73,15 @@ const VideoInterview = () => {
   
   // State for time slot interview parameters
   const [timeSlotInterview, setTimeSlotInterview] = useState(null);
+
+  // Fetch consulting topics from Django API (with fallback to hardcoded list)
+  useEffect(() => {
+    import("../api/client").then(({ djangoClient }) => {
+      djangoClient.get("/consulting-topics/")
+        .then((res) => setConsultingTopics(res.data))
+        .catch(() => {});
+    }).catch(() => {});
+  }, []);
 
   // Extract interview parameters from URL or localStorage
   useEffect(() => {
@@ -1006,6 +1029,9 @@ const VideoInterview = () => {
   const [selectedInterview, setSelectedInterview] = useState(null);
   const [selectedHobby, setSelectedHobby] = useState(null);
   const [showSpecialisedModal, setShowSpecialisedModal] = useState(false);
+  const [showTopicStep, setShowTopicStep] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [consultingTopics, setConsultingTopics] = useState([]);
 
   const difficulties = [
     { id: "all", label: "All Levels" },
@@ -1238,24 +1264,39 @@ const VideoInterview = () => {
   ];
 
   // Handle hobby selection - Case Study and Debate use same flow as Technical/HR
-  const handleHobbySelect = (hobby) => {
-    // For Case Study, use the same flow as Technical/HR interviews
-    if (hobby.id === 'case-study') {
-      dispatch({ type: "NoResume" }); // Case Study doesn't need resume
-      dispatch({ type: "Reset" });
-      dispatch({ type: "Set", payload: "Case Study Interview" }); // Set session type
-      dispatch({ type: "CaseStudy", payload: {interview_type_id: hobby.test_id}}); // Set interview data
-      setShowSystemTest(true); // Use same SystemTest as Technical/HR
-    } else if (hobby.id === 'debate') {
-      // For Debate, use the same flow as Technical/HR interviews
-      dispatch({ type: "NoResume" }); // Debate doesn't need resume
-      dispatch({ type: "Reset" });
-      dispatch({ type: "Set", payload: "Debate Interview" }); // Set session type
-      dispatch({ type: "Debate", payload: {interview_type_id: hobby.test_id}}); // Set interview data
-      setShowSystemTest(true); // Use same SystemTest as Technical/HR
-    } else {
-    }
-  };
+const handleHobbySelect = (hobby) => {
+  if (hobby.id === 'case-study') {
+    // Show topic selection step inside the modal instead of going straight to SystemCheck
+    setShowTopicStep(true);
+    return;
+  }
+  if (hobby.id === 'debate') {
+    dispatch({ type: "NoResume" });
+    dispatch({ type: "Reset" });
+    dispatch({ type: "Set", payload: "Debate Interview" });
+    dispatch({ type: "Debate", payload: { interview_type_id: hobby.test_id } });
+    setShowSpecialisedModal(false);
+    setShowSystemTest(true);
+  }
+};
+
+const handleTopicSelect = (topicSlug) => {
+  const topic = (consultingTopics.length > 0 ? consultingTopics : CONSULTING_TOPICS)
+    .find((t) => t.slug === topicSlug) || null;
+  setSelectedTopic(topic);
+  dispatch({ type: "NoResume" });
+  dispatch({ type: "Reset" });
+  dispatch({ type: "Set", payload: "Case Study Interview" });
+  dispatch({ type: "CaseStudy", payload: { interview_type_id: 27, topic_slug: topicSlug } });
+  setShowTopicStep(false);
+  setShowSpecialisedModal(false);
+  setShowSystemTest(true);
+};
+
+const handleTopicStepBack = () => {
+  setShowTopicStep(false);
+  setSelectedTopic(null);
+};
 
   // Handle interview type click - separate hobby handling
   const handleInterviewTypeClick = (type) => {
@@ -1367,7 +1408,7 @@ const VideoInterview = () => {
         <PopupForm setShowSetupModal={setShowSetupModal} />
       ) : null}
       
-      {/* Specialised Interview Popup Modal */}
+      {/* Specialised Interview Popup Modal — two-step: hobby grid → topic grid */}
       <AnimatePresence>
         {showSpecialisedModal && (
           <>
@@ -1376,7 +1417,7 @@ const VideoInterview = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-              onClick={() => setShowSpecialisedModal(false)}
+              onClick={() => { setShowSpecialisedModal(false); setShowTopicStep(false); }}
               aria-hidden="true"
             />
             <motion.div
@@ -1390,76 +1431,110 @@ const VideoInterview = () => {
               className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl bg-white rounded-3xl shadow-2xl z-50 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
+              {/* Header — dynamic based on step */}
               <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
                 <div className="relative z-10 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-3">
+                    {showTopicStep && (
+                      <button
+                        onClick={handleTopicStepBack}
+                        className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-colors"
+                        aria-label="Back to interview types"
+                      >
+                        <ChevronLeft className="h-5 w-5 text-white" />
+                      </button>
+                    )}
                     <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                       <Sparkles className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h2 id="specialised-modal-title" className="text-2xl font-bold text-white">
-                        Specialised Interview
+                        {showTopicStep ? "Choose a Consulting Topic" : "Specialised Interview"}
                       </h2>
                       <p className="text-white/90 text-sm mt-1">
-                        Choose a category to practice
+                        {showTopicStep
+                          ? "Your AI interviewer will tailor the case to this topic"
+                          : "Choose a category to practice"}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowSpecialisedModal(false)}
+                    onClick={() => { setShowSpecialisedModal(false); setShowTopicStep(false); }}
                     className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-colors"
+                    aria-label="Close"
                   >
                     <X className="h-5 w-5 text-white" />
                   </button>
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="p-6 max-h-[60vh] overflow-y-auto">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {hobbies.map((hobby) => {
-                    // Lock all hobbies except Case Study and Debate
-                    const isLocked = hobby.id !== 'case-study' && hobby.id !== 'debate';
-                    return (
-                      <motion.div
-                        key={hobby.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.1 }}
-                        whileHover={!isLocked ? { scale: 1.05, y: -4 } : {}}
-                        whileTap={!isLocked ? { scale: 0.95 } : {}}
-                        onClick={isLocked ? undefined : () => {
-                          handleHobbySelect(hobby);
-                          setShowSpecialisedModal(false);
-                        }}
-                        className={`relative rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
-                          isLocked
-                            ? 'border-gray-300 bg-gray-50 cursor-not-allowed opacity-60'
-                            : selectedHobby?.id === hobby.id
-                            ? 'border-purple-500 bg-purple-50 shadow-xl scale-105'
-                            : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-lg cursor-pointer'
-                        }`}
-                      >
-                        {isLocked && (
-                          <div className="absolute inset-0 bg-gray-100/50 backdrop-blur-[2px] rounded-2xl z-20 flex items-center justify-center">
-                            <div className="bg-white rounded-full p-3 shadow-xl border-2 border-gray-400">
-                              <Lock className="h-6 w-6 text-gray-600" />
-                            </div>
-                          </div>
-                        )}
-                        <div className="p-5 relative z-10">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center mb-3 shadow-lg">
-                            <Sparkles className="h-6 w-6 text-white" />
-                          </div>
-                          <h3 className="font-bold text-gray-900 mb-2">{hobby.name}</h3>
-                          <p className="text-sm text-gray-600 leading-relaxed">{hobby.description}</p>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+              {/* Content — AnimatePresence switches between hobby grid and topic grid */}
+              <div className="p-6 max-h-[65vh] overflow-y-auto">
+                <AnimatePresence mode="wait">
+                  {!showTopicStep ? (
+                    <motion.div
+                      key="hobby-grid"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {hobbies.map((hobby) => {
+                          const isLocked = hobby.id !== 'case-study' && hobby.id !== 'debate';
+                          return (
+                            <motion.div
+                              key={hobby.id}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.05 }}
+                              whileHover={!isLocked ? { scale: 1.05, y: -4 } : {}}
+                              whileTap={!isLocked ? { scale: 0.95 } : {}}
+                              onClick={isLocked ? undefined : () => handleHobbySelect(hobby)}
+                              className={`relative rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
+                                isLocked
+                                  ? 'border-gray-300 bg-gray-50 cursor-not-allowed opacity-60'
+                                  : selectedHobby?.id === hobby.id
+                                  ? 'border-purple-500 bg-purple-50 shadow-xl scale-105'
+                                  : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-lg cursor-pointer'
+                              }`}
+                            >
+                              {isLocked && (
+                                <div className="absolute inset-0 bg-gray-100/50 backdrop-blur-[2px] rounded-2xl z-20 flex items-center justify-center">
+                                  <div className="bg-white rounded-full p-3 shadow-xl border-2 border-gray-400">
+                                    <Lock className="h-6 w-6 text-gray-600" />
+                                  </div>
+                                </div>
+                              )}
+                              <div className="p-5 relative z-10">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center mb-3 shadow-lg">
+                                  <Sparkles className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 className="font-bold text-gray-900 mb-2">{hobby.name}</h3>
+                                <p className="text-sm text-gray-600 leading-relaxed">{hobby.description}</p>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="topic-grid"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      <TopicSelectionGrid
+                        topics={consultingTopics.length > 0 ? consultingTopics : CONSULTING_TOPICS}
+                        selectedTopic={selectedTopic}
+                        onSelect={handleTopicSelect}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </>

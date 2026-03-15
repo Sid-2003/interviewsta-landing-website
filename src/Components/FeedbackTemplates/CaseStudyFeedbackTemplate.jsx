@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Target, TrendingUp, Lightbulb, BarChart3, Brain } from 'lucide-react';
+import { Target, TrendingUp, Lightbulb, BarChart3, Brain, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { MetricCard } from './shared/MetricCards';
 import ScoreBreakdown from './shared/ScoreBreakdown';
 import DetailedScoreBars from './shared/DetailedScoreBars';
@@ -22,10 +23,16 @@ import LockedSection from './shared/LockedSection';
  *   interaction_log, interaction_status_log
  */
 const CaseStudyFeedbackTemplate = ({ feedbackData = {}, canAccessFullFeedback = true, currentTier = 0, onUnlock }) => {
+  const navigate = useNavigate();
   const overallScore = Math.trunc(feedbackData?.overall_score || 0);
   const detailedScores = feedbackData?.detailed_scores || {};
   const feedbackSummary = feedbackData?.feedback_summary || {};
   const subScores = feedbackData?.sub_scores || {};
+
+  // Topic segmentation fields
+  const topicInfo = feedbackData?.topic_info || null;
+  const topicName = feedbackData?.topic_name || topicInfo?.name || null;
+  const frameworkAdherence = feedbackData?.framework_adherence ?? null;
 
   // Try both "Analytical" and "Analytical Skills" for backward compatibility
   const analyticalDetails = detailedScores['Analytical'] || detailedScores['Analytical Skills'] || {};
@@ -81,6 +88,26 @@ const CaseStudyFeedbackTemplate = ({ feedbackData = {}, canAccessFullFeedback = 
   return (
     <div className="space-y-8 px-2 sm:px-4 pb-12">
 
+      {/* Topic badge — shown only when a topic was selected */}
+      {topicName && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center gap-3 flex-wrap"
+        >
+          <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 border border-orange-200 rounded-full px-4 py-1.5 text-sm font-semibold shadow-sm">
+            {topicInfo?.icon && <span>{topicInfo.icon}</span>}
+            {topicName} Case
+          </span>
+          {topicInfo?.frameworks?.length > 0 && (
+            <span className="text-xs text-gray-500">
+              Expected frameworks: {topicInfo.frameworks.slice(0, 2).join(" · ")}
+            </span>
+          )}
+        </motion.div>
+      )}
+
       {/* ROW 1: Metric Cards */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -113,11 +140,14 @@ const CaseStudyFeedbackTemplate = ({ feedbackData = {}, canAccessFullFeedback = 
               <p className="text-gray-600 text-base mt-1 font-medium">Analytical thinking and business acumen assessment</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+          <div className={`grid grid-cols-1 gap-8 items-center ${frameworkAdherence !== null ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
             {[
               { score: confidenceScore, label: 'Analytical Confidence', sub: 'AI Assessment', color: '#f59e0b' },
               { score: hiringReadiness, label: 'Consultant Readiness', sub: 'Industry Match', color: '#10b981' },
               { score: strategicScore, label: 'Strategic Thinking', sub: 'Business Score', color: '#8b5cf6' },
+              ...(frameworkAdherence !== null
+                ? [{ score: frameworkAdherence, label: 'Framework Mastery', sub: topicName ? `${topicName} Framework` : 'Framework Usage', color: '#f97316' }]
+                : []),
             ].map((g, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.1 }}
                 className="bg-white/90 rounded-3xl p-8 border-2 border-gray-100 shadow-xl flex flex-col items-center">
@@ -214,6 +244,22 @@ const CaseStudyFeedbackTemplate = ({ feedbackData = {}, canAccessFullFeedback = 
       <LockedSection isLocked={!canAccessFullFeedback} title="Interview Transcript" currentTier={currentTier} onUnlock={onUnlock}>
         <TranscriptViewer transcript={transcript} />
       </LockedSection>
+
+      {/* Try a Different Topic CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.5 }}
+        className="flex justify-center pt-4"
+      >
+        <button
+          onClick={() => navigate('/video-interview')}
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200"
+        >
+          Try a Different Topic
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </motion.div>
     </div>
   );
 };

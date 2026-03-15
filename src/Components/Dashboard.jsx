@@ -32,6 +32,7 @@ import LearningProgressSection from './Dashboard/LearningProgressSection';
 import PerformanceOverviewCards from './StudentPerformance/PerformanceOverviewCards';
 import PerformanceTrendChart from './StudentPerformance/PerformanceTrendChart';
 import PerformanceByTypeBreakdown from './StudentPerformance/PerformanceByTypeBreakdown';
+import TopicPerformanceDashboard from './StudentPerformance/TopicPerformanceDashboard';
 
 import api from "../service/api";
 const Dashboard = ({ onSectionChange }) => {
@@ -564,6 +565,7 @@ const handleResumeReportClick = (p) => {
                 <PerformanceTrendChart trend={performanceAnalysis.overall?.trend} title="Overall performance trend" height={280} />
                 <PerformanceByTypeBreakdown byType={performanceAnalysis.by_type} />
               </div>
+              <TopicPerformanceDashboard />
             </div>
           </motion.div>
         )}
