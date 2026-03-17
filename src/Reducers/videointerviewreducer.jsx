@@ -24,6 +24,7 @@ export const VideoInterviewinitialstate = {
   CaseStudy: {
     interview_type_id: "",
     topic_slug: "",
+    company_slug: "",
   },
   Communication: {
     interview_type_id: "",

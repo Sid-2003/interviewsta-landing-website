@@ -4,6 +4,7 @@ import { useVideoInterview } from "../Contexts/VideoInterviewContext";
 import PopupForm from "./PopupForm";
 import SystemCheck from "./SystemCheck";
 import TopicSelectionGrid from "./TopicSelectionGrid";
+import CompanyPlaybookGrid from "./CompanyPlaybookGrid";
 import {
   BookOpen,
   Play,
@@ -60,6 +61,18 @@ const CONSULTING_TOPICS = [
   { slug: "operations",             name: "Operations",             icon: "⚙️", color: "from-slate-400 to-gray-500",   description: "Reduce costs or improve throughput in a business process.",                                frameworks: ["Process mapping", "Bottleneck"] },
   { slug: "competitive_response",   name: "Competitive Response",   icon: "⚔️", color: "from-pink-400 to-rose-500",    description: "Respond to a competitor entering the market or disrupting pricing.",                       frameworks: ["Competitive map", "War-gaming"] },
   { slug: "digital_transformation", name: "Digital Transformation", icon: "💡", color: "from-indigo-400 to-blue-600",  description: "Build the case for or against a major technology investment.",                             frameworks: ["Build/buy/partner", "ROI/NPV"] },
+];
+
+// Hardcoded company playbooks — real Indian startup growth stories
+const COMPANY_PLAYBOOKS = [
+  { slug: "zomato",    name: "Zomato",    tagline: "From Menu to Home",              icon: "🍕", color: "from-red-500 to-orange-500",    era: "2015–2022", topic: "growth_strategy" },
+  { slug: "cred",      name: "CRED",      tagline: "Pay Bills, Feel Rich",           icon: "💳", color: "from-slate-700 to-gray-900",    era: "2018–2023", topic: "market_entry" },
+  { slug: "meesho",    name: "Meesho",    tagline: "WhatsApp + Shopping = Mind Blown", icon: "🛍️", color: "from-pink-500 to-rose-500",   era: "2019–2022", topic: "growth_strategy" },
+  { slug: "dunzo",     name: "Dunzo",     tagline: "10 Minutes or It's Free",        icon: "⚡", color: "from-green-500 to-teal-500",    era: "2016–2022", topic: "operations" },
+  { slug: "zepto",     name: "Zepto",     tagline: "Groceries Before You Blink",     icon: "🥦", color: "from-purple-500 to-violet-600", era: "2021–2023", topic: "operations" },
+  { slug: "razorpay",  name: "Razorpay",  tagline: "Making Payments Boring Again",   icon: "💸", color: "from-blue-600 to-indigo-600",   era: "2014–2022", topic: "digital_transformation" },
+  { slug: "ola",       name: "Ola",       tagline: "Honk Honk, We're Profitable",    icon: "🚕", color: "from-yellow-500 to-amber-500",  era: "2014–2020", topic: "competitive_response" },
+  { slug: "byjus",     name: "BYJU'S",    tagline: "Learning is Fun (Allegedly)",    icon: "📖", color: "from-cyan-500 to-blue-500",     era: "2015–2022", topic: "growth_strategy" },
 ];
 
 
@@ -1032,6 +1045,8 @@ const VideoInterview = () => {
   const [showTopicStep, setShowTopicStep] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [consultingTopics, setConsultingTopics] = useState([]);
+  const [showCompanyStep, setShowCompanyStep] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(null);
 
   const difficulties = [
     { id: "all", label: "All Levels" },
@@ -1236,6 +1251,12 @@ const VideoInterview = () => {
       description: 'Analyze real-world scenarios and develop your problem-solving and analytical thinking skills'
     },
     {
+      id: 'company-playbook',
+      name: 'Real Company Playbooks',
+      test_id: 27,
+      description: 'Solve the actual growth problems that made Indian startups famous — Zomato, CRED, Meesho & more'
+    },
+    {
       id: 'public-speaking',
       name: 'Public Speaking',
       description: 'Build confidence and improve your speaking skills through structured practice sessions'
@@ -1270,6 +1291,11 @@ const handleHobbySelect = (hobby) => {
     setShowTopicStep(true);
     return;
   }
+  if (hobby.id === 'company-playbook') {
+    // Show company selection step inside the modal
+    setShowCompanyStep(true);
+    return;
+  }
   if (hobby.id === 'debate') {
     dispatch({ type: "NoResume" });
     dispatch({ type: "Reset" });
@@ -1278,6 +1304,27 @@ const handleHobbySelect = (hobby) => {
     setShowSpecialisedModal(false);
     setShowSystemTest(true);
   }
+};
+
+const handleCompanySelect = (companySlug) => {
+  const company = COMPANY_PLAYBOOKS.find((c) => c.slug === companySlug) || null;
+  setSelectedCompany(company);
+  dispatch({ type: "NoResume" });
+  dispatch({ type: "Reset" });
+  dispatch({ type: "Set", payload: "Case Study Interview" });
+  dispatch({ type: "CaseStudy", payload: {
+    interview_type_id: 27,
+    topic_slug: company ? company.topic : "",
+    company_slug: companySlug,
+  }});
+  setShowCompanyStep(false);
+  setShowSpecialisedModal(false);
+  setShowSystemTest(true);
+};
+
+const handleCompanyStepBack = () => {
+  setShowCompanyStep(false);
+  setSelectedCompany(null);
 };
 
 const handleTopicSelect = (topicSlug) => {
@@ -1417,7 +1464,7 @@ const handleTopicStepBack = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-              onClick={() => { setShowSpecialisedModal(false); setShowTopicStep(false); }}
+              onClick={() => { setShowSpecialisedModal(false); setShowTopicStep(false); setShowCompanyStep(false); }}
               aria-hidden="true"
             />
             <motion.div
@@ -1436,9 +1483,9 @@ const handleTopicStepBack = () => {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
                 <div className="relative z-10 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    {showTopicStep && (
+                    {(showTopicStep || showCompanyStep) && (
                       <button
-                        onClick={handleTopicStepBack}
+                        onClick={showTopicStep ? handleTopicStepBack : handleCompanyStepBack}
                         className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-colors"
                         aria-label="Back to interview types"
                       >
@@ -1450,17 +1497,23 @@ const handleTopicStepBack = () => {
                     </div>
                     <div>
                       <h2 id="specialised-modal-title" className="text-2xl font-bold text-white">
-                        {showTopicStep ? "Choose a Consulting Topic" : "Specialised Interview"}
+                        {showTopicStep
+                          ? "Choose a Consulting Topic"
+                          : showCompanyStep
+                          ? "Real Company Playbooks"
+                          : "Specialised Interview"}
                       </h2>
                       <p className="text-white/90 text-sm mt-1">
                         {showTopicStep
                           ? "Your AI interviewer will tailor the case to this topic"
+                          : showCompanyStep
+                          ? "Pick a startup — your AI interviewer knows the full story"
                           : "Choose a category to practice"}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => { setShowSpecialisedModal(false); setShowTopicStep(false); }}
+                    onClick={() => { setShowSpecialisedModal(false); setShowTopicStep(false); setShowCompanyStep(false); }}
                     className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-colors"
                     aria-label="Close"
                   >
@@ -1469,10 +1522,38 @@ const handleTopicStepBack = () => {
                 </div>
               </div>
 
-              {/* Content — AnimatePresence switches between hobby grid and topic grid */}
+              {/* Content — AnimatePresence switches between hobby grid, topic grid, and company grid */}
               <div className="p-6 max-h-[65vh] overflow-y-auto">
                 <AnimatePresence mode="wait">
-                  {!showTopicStep ? (
+                  {showCompanyStep ? (
+                    <motion.div
+                      key="company-grid"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      <CompanyPlaybookGrid
+                        companies={COMPANY_PLAYBOOKS}
+                        selectedCompany={selectedCompany}
+                        onSelect={handleCompanySelect}
+                      />
+                    </motion.div>
+                  ) : showTopicStep ? (
+                    <motion.div
+                      key="topic-grid"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      <TopicSelectionGrid
+                        topics={consultingTopics.length > 0 ? consultingTopics : CONSULTING_TOPICS}
+                        selectedTopic={selectedTopic}
+                        onSelect={handleTopicSelect}
+                      />
+                    </motion.div>
+                  ) : (
                     <motion.div
                       key="hobby-grid"
                       initial={{ opacity: 0, x: -20 }}
@@ -1482,7 +1563,7 @@ const handleTopicStepBack = () => {
                     >
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {hobbies.map((hobby) => {
-                          const isLocked = hobby.id !== 'case-study' && hobby.id !== 'debate';
+                          const isLocked = hobby.id !== 'case-study' && hobby.id !== 'company-playbook' && hobby.id !== 'debate';
                           return (
                             <motion.div
                               key={hobby.id}
@@ -1508,7 +1589,11 @@ const handleTopicStepBack = () => {
                                 </div>
                               )}
                               <div className="p-5 relative z-10">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center mb-3 shadow-lg">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 shadow-lg ${
+                                  hobby.id === 'company-playbook'
+                                    ? 'bg-gradient-to-br from-orange-400 to-red-500'
+                                    : 'bg-gradient-to-br from-purple-400 to-pink-500'
+                                }`}>
                                   <Sparkles className="h-6 w-6 text-white" />
                                 </div>
                                 <h3 className="font-bold text-gray-900 mb-2">{hobby.name}</h3>
@@ -1518,20 +1603,6 @@ const handleTopicStepBack = () => {
                           );
                         })}
                       </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="topic-grid"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.18 }}
-                    >
-                      <TopicSelectionGrid
-                        topics={consultingTopics.length > 0 ? consultingTopics : CONSULTING_TOPICS}
-                        selectedTopic={selectedTopic}
-                        onSelect={handleTopicSelect}
-                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
